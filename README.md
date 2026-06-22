@@ -1,6 +1,6 @@
 # Developer Landing API
 
-## 1.  Как запустить проект
+## 1. 🚀 Как запустить проект
 
 ### Требования
 - Docker Desktop + WSL2 (Windows) или Linux/macOS
@@ -62,37 +62,38 @@ AI:
 
 Опционально: OpenAI API (gpt-3.5-turbo) – включается автоматически при наличии ключа в .env
 
-3. 🏗️ Архитектура
-Структура проекта (ключевые файлы)
-text
-app/
-├── Http/
-│   ├── Controllers/
-│   │   ├── ContactController.php    – обработка POST /api/contact
-│   │   ├── HealthController.php     – healthcheck
-│   │   └── MetricsController.php    – статистика
-│   ├── Middleware/
-│   │   └── CorsMiddleware.php       – CORS‑заголовки
-│   └── Requests/
-│       └── ContactRequest.php       – правила валидации
-├── Models/
-│   └── Contact.php                  – модель Eloquent
-└── Services/
-    ├── AIService.php                – AI‑анализ (OpenAI / fallback)
-    └── ContactService.php           – бизнес‑логика обработки обращения
+3. Архитектура
+Структура проекта
+Все файлы, относящиеся к API, организованы по слоям.
 
-routes/
-└── api.php                          – маршруты API
+В папке app/Http/Controllers находятся контроллеры:
 
-bootstrap/
-└── app.php                          – конфигурация ядра, rate limiter
+ContactController – обрабатывает POST‑запросы на /api/contact, принимает провалидированные данные, вызывает сервисный слой и возвращает JSON‑ответ.
 
-config/
-└── logging.php                      – добавлен канал 'contact'
+HealthController – возвращает статус сервера и текущую временную метку.
 
-database/
-└── migrations/
-    └── ..._create_contacts_table.php
+MetricsController – собирает статистику обращений из базы данных и возвращает её в JSON.
+
+В папке app/Http/Requests лежит ContactRequest – класс валидации, в котором описаны правила проверки полей name, phone, email, comment.
+
+В папке app/Http/Middleware находится CorsMiddleware, добавляющий заголовки Access-Control-Allow-* для поддержки кросс‑доменных запросов.
+
+В папке app/Models расположена модель Contact, связанная с таблицей contacts через Eloquent.
+
+В папке app/Services реализована бизнес‑логика:
+
+AIService – отвечает за анализ комментария: если задан ключ OpenAI, используется API GPT‑3.5‑turbo, иначе включается локальный fallback на ключевых словах.
+
+ContactService – координирует обработку обращения: вызывает AI‑анализ, сохраняет запись в базу данных и эмулирует отправку email‑уведомлений (пишет в лог).
+
+Маршруты определены в файле routes/api.php. Там же подключены middleware cors и throttle:contact.
+
+В bootstrap/app.php зарегистрирован middleware cors, а также определён Rate Limiter с именем contact, который берёт лимиты из переменной окружения CONTACT_THROTTLE.
+
+Конфигурация логирования расширена в config/logging.php: добавлен канал contact, направляющий записи в файл storage/logs/contact.log.
+
+Миграция для создания таблицы contacts находится в database/migrations.
+
 Паттерны проектирования
 Слоистая архитектура: Controllers → Services → Models.
 
@@ -115,33 +116,15 @@ Fallback‑анализатор – гарантирует работоспос�
 
 4. Реализация API
 Эндпоинты
-Метод	Путь	Описание
-POST	/api/contact	Отправить обращение
-GET	/api/health	Проверка состояния сервера
-GET	/api/metrics	Статистика обращений
-Примеры запросов
-Успешное обращение
-bash
-curl -X POST http://localhost:8000/api/contact \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Иван","phone":"+79001234567","email":"ivan@test.com","comment":"Отличный лендинг, хочу сотрудничать!"}'
-Ответ (200):
+POST /api/contact – отправить обращение
 
-json
-{
-    "status": "success",
-    "message": "Сообщение успешно отправлено",
-    "sentiment": "positive",
-    "category": "partnership"
-}
-Ошибка валидации (422)
-bash
-curl -X POST http://localhost:8000/api/contact \
-  -H "Content-Type: application/json" \
-  -d '{"name":"","phone":"abc","email":"bad","comment":"short"}'
-Ответ: JSON с полем errors, описывающим каждое нарушение.
+GET /api/health – проверка состояния сервера
 
-Rate limit (429)
+GET /api/metrics – статистика обращений
+
+Все ответы возвращаются в формате JSON.
+
+
 При превышении 5 запросов в минуту с одного IP возвращается:
 
 json
@@ -171,6 +154,7 @@ json
 Промпты (для OpenAI, если используется)
 Системный промпт:
 
+text
 Ты анализируешь обращения. Верни только JSON: {"sentiment":"positive/negative/neutral","category":"general/partnership/bug/feature/complaint"}
 Пользовательский промпт – текст комментария из формы.
 
