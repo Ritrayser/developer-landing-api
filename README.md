@@ -24,9 +24,6 @@ APP_PORT=8000
 DB_CONNECTION=sqlite
 DB_DATABASE=database/database.sqlite
 
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-3.5-turbo
-
 CONTACT_THROTTLE=5,1
 CONTACT_EMAIL=owner@example.com
 
@@ -43,3 +40,9 @@ touch database/database.sqlite
 ./vendor/bin/sail php artisan migrate
 
 Приложение доступно на http://localhost:8000.
+
+Ключ OpenAI не требуется используется встроенный fallback анализатор, который:
+
+определяет тональность по позитивным/негативным словам;
+
+определяет категорию по ключевым фразам («сотрудничество», «баг», «предложение» и т.п.).
